@@ -1,4 +1,4 @@
-# GuardRail-AI
+# Citadel
 
 > A cryptographically-secured firewall and grammar-strict proxy that sits in front of your LLM APIs.
 

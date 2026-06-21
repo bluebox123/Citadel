@@ -1,0 +1,99 @@
+# =============================================================================
+# GuardRail-AI — Docker Compose  (local development / integration testing)
+# =============================================================================
+# Quick start:
+#   1. Copy .env.example → .env and fill in a real GUARDRAIL_SECRET_KEY:
+#        python -c "import secrets; print(secrets.token_hex(32))"
+#   2. docker compose up --build
+#
+# Endpoints once running:
+#   Gateway  →  http://localhost:8000/api/v1/gateway
+#   Health   →  http://localhost:8000/health
+#   OpenAPI  →  http://localhost:8000/docs
+#
+# Requires Docker Compose v2 (bundled with Docker Desktop / docker compose plugin).
+# =============================================================================
+
+services:
+
+  guardrail-ai:
+
+    # ── Build ─────────────────────────────────────────────────────────────────
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime          # build only the production stage; skip builder layer
+      args:
+        APP_UID: "10001"       # must match the UID declared in the Dockerfile
+        APP_GID: "10001"
+
+    image: guardrail-ai:latest
+    container_name: guardrail-ai
+    restart: unless-stopped
+
+    # ── Port mapping ──────────────────────────────────────────────────────────
+    # HOST_PORT lets you run multiple instances locally without conflicts:
+    #   HOST_PORT=8001 docker compose up
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+
+    # ── Environment variables ─────────────────────────────────────────────────
+    # Values are read from the shell environment or a .env file in this directory.
+    # Defaults are safe for local testing but unsuitable for production.
+    environment:
+
+      # REQUIRED — the app refuses to start if this is the placeholder value.
+      # Generate: python -c "import secrets; print(secrets.token_hex(32))"
+      GUARDRAIL_SECRET_KEY: "${GUARDRAIL_SECRET_KEY:-REPLACE_ME_generate_with_python_secrets_token_hex_32}"
+
+      # Optional LLM backend — the mock LLM is used automatically when absent.
+      LLM_API_BASE_URL: "${LLM_API_BASE_URL:-https://api.openai.com/v1}"
+      LLM_API_KEY:      "${LLM_API_KEY:-}"
+
+      # Logging verbosity for the Python logging module (DEBUG / INFO / WARNING).
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+
+      # Runtime environment label consumed by application logic.
+      ENV: "${ENV:-production}"
+
+    # ── Security hardening ────────────────────────────────────────────────────
+
+    # Prevent the container process from gaining new privileges via setuid
+    # binaries or file capabilities after the container starts.
+    security_opt:
+      - no-new-privileges:true
+
+    # Drop every Linux capability; the FastAPI/uvicorn server needs none.
+    # Add back individual capabilities only if a future dependency requires them.
+    cap_drop:
+      - ALL
+
+    # Make the root filesystem read-only; pairs with PYTHONDONTWRITEBYTECODE=1
+    # in the Dockerfile.  Python temporary files (e.g. tempfile.mkstemp) use
+    # /tmp, which is provided as an in-memory tmpfs below.
+    read_only: true
+
+    tmpfs:
+      - /tmp                   # writable in-memory scratch space for the process
+
+    # ── Health check ─────────────────────────────────────────────────────────
+    # Mirrors the HEALTHCHECK instruction in the Dockerfile so that
+    # `docker compose ps` shows the health state during local testing.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; r=urllib.request.urlopen('http://localhost:8000/health',timeout=4); sys.exit(0 if r.status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    # ── Log rotation ──────────────────────────────────────────────────────────
+    # Prevents the json-file log driver from filling the host disk on long runs.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

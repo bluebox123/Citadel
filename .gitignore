@@ -1,0 +1,51 @@
+# Virtual environment
+.venv/
+venv/
+
+# Secrets — never commit
+.env
+*.key
+*.pem
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Test + coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Type-checker cache
+.mypy_cache/
+.ruff_cache/
+
+# Build / dist
+dist/
+build/
+*.egg-info/
+
+# Frontend (Next.js / Node)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env.local
+frontend/.env*.local
+frontend/tsconfig.tsbuildinfo
+frontend/nul
+
+# Tooling artifacts (generated, not part of the project)
+graphify-out/
+.claude-flow/
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# Personal working notes
+resume.md

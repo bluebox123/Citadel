@@ -1,0 +1,34 @@
+# Next.js
+.next/
+out/
+build/
+*.rsc
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Build artifacts
+dist/
+coverage/
+.turbo/
+
+# OS
+Thumbs.db
+.DS_Store
+.env*.local

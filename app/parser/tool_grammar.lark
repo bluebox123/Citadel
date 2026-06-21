@@ -1,0 +1,159 @@
+// tool_grammar.lark — Strict L-Attributed CFG for LLM Tool-Call Output Validation
+//
+// PARSING MODEL
+// ─────────────
+// Designed for Lark LALR(1) with contextual lexer. The contextual lexer resolves
+// terminal ambiguities using parser state, making it functionally equivalent to
+// LL(1) for this grammar. Every choice point is resolved with a single look-ahead
+// token and zero rightward dependencies — satisfying the L-attribution requirement
+// mandated by GuardRail-AI's single-pass streaming validation architecture.
+//
+// REJECTION GUARANTEES (grammar and lexer level, before the Transformer runs)
+// ────────────────────────────────────────────────────────────────────────────
+//   ✓  Conversational prefix ("Here is your JSON:…")   → UnexpectedCharacters at 'H'
+//   ✓  Trailing commas anywhere                          → UnexpectedToken at ',' / ']' / '}'
+//   ✓  Unescaped interior quotes inside strings          → LexError in ESCAPED_STRING regex
+//   ✓  Wrong key order ("arguments" before "tool_name") → UnexpectedToken: expected TOOL_NAME_KEY
+//   ✓  Extra or unknown top-level keys                   → UnexpectedToken after arguments_pair
+//   ✓  Non-object arguments value (string, array,        → UnexpectedToken: expected '{'
+//      number, boolean, or null after "arguments":)
+//   ✓  Any trailing content after closing '}'            → UnexpectedToken: expected EOF
+//
+// SEMANTIC CONSTRAINTS (enforced by transformer.py, not this file)
+// ─────────────────────────────────────────────────────────────────
+//   •  tool_name value must be in the whitelist: ["search", "fetch", "compute"]
+//   •  Argument object keys must conform to the per-tool schema
+//
+// VALID INPUT SHAPE
+// ─────────────────
+//   {
+//     "tool_name": "search",
+//     "arguments": {
+//       "query": "machine learning",
+//       "limit": 10
+//     }
+//   }
+
+// ─── Entry point ──────────────────────────────────────────────────────────────
+// '?' makes this rule transparent: the parse tree root will be the tool_call
+// node rather than a wrapper start node. Lark inline rule convention.
+?start: tool_call
+
+// ─── Top-level tool-call structure ────────────────────────────────────────────
+// A tool call is a JSON object with EXACTLY two key-value pairs in fixed order:
+//   1. "tool_name"  — always first
+//   2. "arguments"  — always second
+//
+// L-attribution anchor: the parser commits to this entire production upon
+// consuming the opening '{'. No ordering variants exist; no future token is
+// ever consulted to decide whether "tool_name" or "arguments" comes first.
+// This eliminates all rightward dependencies at the top level.
+tool_call: "{" tool_name_pair "," arguments_pair "}"
+
+tool_name_pair: TOOL_NAME_KEY ":" tool_name_value
+arguments_pair: ARGUMENTS_KEY ":" json_object
+
+// ─── Exact-match key terminals ────────────────────────────────────────────────
+// Priority 2 (higher than ESCAPED_STRING's default of 0) causes the contextual
+// LALR lexer to prefer these terminals in parser states where they appear in
+// the look-ahead set. At every other position ESCAPED_STRING is used instead,
+// so there is no ambiguity between these tokens and general string literals.
+TOOL_NAME_KEY.2: "\"tool_name\""
+ARGUMENTS_KEY.2: "\"arguments\""
+
+// ─── Tool name value ──────────────────────────────────────────────────────────
+// Syntactically: any well-formed quoted JSON string.
+// Semantically: must match one of ["search", "fetch", "compute"].
+// The whitelist is intentionally a Transformer concern, not a grammar concern —
+// keeping the grammar context-free and extensible to new tools without grammar
+// edits.
+tool_name_value: ESCAPED_STRING
+
+// ─── Arguments: type-pinned to JSON object ────────────────────────────────────
+// This is the critical safety pin. No union type is available here — the grammar
+// does not allow "arguments": "some text", "arguments": 42, or "arguments": null.
+// Any non-object LLM output at this position causes an immediate parse error
+// before the Transformer is ever invoked.
+//
+// json_object is recursive: argument schemas of arbitrary depth are supported.
+json_object: "{" [object_pair ("," object_pair)*] "}"
+
+object_pair: ESCAPED_STRING ":" json_value
+
+// ─── Recursive JSON value ─────────────────────────────────────────────────────
+// Each alternative is discriminated by a distinct leading terminal character
+// class — exactly one token of look-ahead resolves every branch:
+//
+//   '{' (0x7B)           → json_object   — nested argument object
+//   '[' (0x5B)           → json_array    — argument list
+//   '"' (0x22)           → json_string   — ESCAPED_STRING starts here
+//   '0'–'9' or '-'       → json_number   — JSON_NUMBER starts here
+//   't' (and only "true")→ TRUE terminal
+//   'f' (and only "false")→ FALSE terminal
+//   'n' (and only "null") → NULL terminal
+//
+// No pair of alternatives shares a leading character — this grammar is LL(1) at
+// this rule and every sub-rule. All inherited attributes flow strictly left-to-right.
+//
+// '?' inlines json_value: the parse tree contains the concrete type nodes
+// (json_object, json_array, json_string, …) directly, with no json_value wrapper.
+?json_value: json_object
+           | json_array
+           | json_string
+           | json_number
+           | json_bool
+           | json_null
+
+// ─── Compound JSON types ──────────────────────────────────────────────────────
+// Arrays support all json_value element types recursively.
+// The optional group [...] avoids a separate empty-array production while
+// keeping the grammar LL(1): after '[', the next token is either ']' (empty)
+// or the first character of a json_value (non-empty). One-token decision. ✓
+//
+// Trailing comma rejection: the grammar allows only "value COMMA value" patterns.
+// "value COMMA ']'" is never a valid suffix — the comma always demands a successor.
+json_array: "[" [json_value ("," json_value)*] "]"
+
+// ─── Scalar JSON types ────────────────────────────────────────────────────────
+json_string: ESCAPED_STRING
+json_number: JSON_NUMBER
+json_bool:   TRUE | FALSE
+json_null:   NULL
+
+// ─── JSON keyword terminals ───────────────────────────────────────────────────
+// Priority 1: higher than ESCAPED_STRING and JSON_NUMBER (both default 0).
+// The contextual LALR lexer restricts which terminals are tried in each parser
+// state, so these keywords are only matched where a json_bool or json_null
+// is expected — no conflict with string or number positions.
+TRUE.1:  "true"
+FALSE.1: "false"
+NULL.1:  "null"
+
+// ─── Number terminal (RFC 8259 compliant) ────────────────────────────────────
+// Custom terminal rather than %import common.NUMBER because:
+//   1. common.NUMBER excludes the leading '-' (that is common.SIGNED_NUMBER).
+//   2. This regex follows the JSON spec exactly: no leading '+', no leading
+//      zeros in the integer part (except bare "0"), valid exponent syntax.
+// Regex: /-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/
+//   Leading '-': negative numbers (e.g. -7.5e2 is valid JSON).
+//   Integer part: 0 or non-zero digit followed by zero or more digits.
+//   Decimal part: optional '.' followed by one or more digits.
+//   Exponent part: optional 'e'/'E', optional sign, one or more digits.
+// The leading '-' or '0'-'9' start characters are distinct from every other
+// terminal ("{", "[", '"', "true", "false", "null"), preserving LL(1).
+JSON_NUMBER: /-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/
+
+// ─── Standard library imports ─────────────────────────────────────────────────
+// ESCAPED_STRING  /"([^"\\]|\\.)*"/
+//   Matches any JSON-compliant quoted string. An unescaped '"' inside the
+//   string body breaks the regex mid-match, causing an immediate LexError
+//   before the parser sees the token — unescaped-quote rejection at lexer level.
+//
+// WS  /\s+/
+//   All Unicode whitespace. Discarded between every pair of tokens via %ignore.
+//   Leading whitespace before the opening '{' is silently stripped, but any
+//   non-whitespace character before '{' (e.g. 'H' in "Here is…") is not a
+//   valid terminal and raises UnexpectedCharacters immediately.
+%import common.ESCAPED_STRING
+%import common.WS
+%ignore WS

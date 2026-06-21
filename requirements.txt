@@ -1,0 +1,40 @@
+# ==============================================================================
+# GuardRail-AI — Requirements
+# Python 3.11+  |  pip install -r requirements.txt
+# ==============================================================================
+
+# --- Core Framework -----------------------------------------------------------
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0        # [standard] adds httptools + websockets
+
+# --- Data Validation ----------------------------------------------------------
+pydantic>=2.7.0
+pydantic-settings>=2.4.0         # env-var / .env loading for config
+
+# --- Parser Engine ------------------------------------------------------------
+lark>=1.2.0                      # EBNF / LL(1) CFG parser for output validation
+
+# --- Configuration ------------------------------------------------------------
+pyyaml>=6.0.2                    # Jailbreak rule file parsing
+
+# --- Cryptography -------------------------------------------------------------
+# HMAC-SHA256 uses stdlib (hmac + hashlib); cryptography package provides
+# additional primitives for key-management utilities (key derivation, encoding).
+cryptography>=43.0.0
+
+# --- ML Classifier (harmful content detection) --------------------------------
+scikit-learn>=1.4.0             # TF-IDF + Logistic Regression pipeline
+numpy>=1.26.0                   # required by scikit-learn
+
+# --- HTTP Client (LLM API calls + async test client) -------------------------
+httpx>=0.27.0
+
+# --- Testing ------------------------------------------------------------------
+pytest>=8.3.0
+pytest-asyncio>=0.24.0           # async test support for FastAPI
+pytest-cov>=5.0.0                # coverage reports
+
+# --- Development Tools --------------------------------------------------------
+black>=24.8.0                    # deterministic code formatting
+ruff>=0.6.0                      # fast linting (replaces flake8/isort)
+mypy>=1.11.0                     # static type checking

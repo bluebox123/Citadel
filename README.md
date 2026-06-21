@@ -181,8 +181,4 @@ Set via environment variables (see `.env.example`):
 
 Both the HMAC key and the CFG grammar are validated at startup — misconfiguration surfaces at boot, not on the first live request.
 
----
 
-## License
-
-This project is provided for educational and research purposes.

@@ -1,5 +1,5 @@
 """
-GuardRail-AI — FastAPI application entry point.
+Citadel — FastAPI application entry point.
 
 Middleware stack (outermost → innermost, i.e. request processing order):
   CORSMiddleware  →  FirewallMiddleware  →  ServerErrorMiddleware  →  ExceptionMiddleware  →  Router
@@ -42,9 +42,9 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     validate_key_at_startup()       # HMAC key present and ≥ 32 bytes
     validate_parser_at_startup()    # CFG grammar compiled without error
     load_ml_model()                 # ML classifier (graceful if model.pkl absent)
-    logger.info("GuardRail-AI starting up")
+    logger.info("Citadel starting up")
     yield
-    logger.info("GuardRail-AI shutting down")
+    logger.info("Citadel shutting down")
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="GuardRail-AI",
+    title="Citadel",
     description=(
         "Cryptographically secured LLM firewall and grammar-strict proxy. "
         "All inbound prompts are scanned for injection attacks before "
@@ -92,7 +92,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["POST", "GET", "OPTIONS"],
     allow_headers=["Content-Type"],
-    expose_headers=["X-Guardrail-Signature"],
+    expose_headers=["X-Citadel-Signature"],
 )
 
 # v1 routes — gateway pipeline lives in proxy_v1.router.

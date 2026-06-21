@@ -11,7 +11,7 @@ Test organisation mirrors the three security layers built in Phase 1:
 All tests use httpx.AsyncClient wired to the ASGI app (no network I/O).
 The shared `client` fixture is defined in conftest.py.
 
-NOTE: GUARDRAIL_SECRET_KEY is set at conftest.py module level so that
+NOTE: CITADEL_SECRET_KEY is set at conftest.py module level so that
 crypto.py's eager _load_key() call finds a valid key before any test runs.
 """
 
@@ -178,10 +178,10 @@ class TestFirewallBlocking:
     ) -> None:
         """
         The gateway must never be reached on a blocked request — therefore
-        X-GuardRail-Signature must be absent from the response.
+        X-Citadel-Signature must be absent from the response.
         """
         r = await client.post(_GATEWAY, content=_body(prompt), headers=_JSON_CT)
-        assert "x-guardrail-signature" not in r.headers, (
+        assert "x-citadel-signature" not in r.headers, (
             f"[{test_id}] Signature header must not appear on firewall rejections"
         )
 
@@ -239,8 +239,8 @@ class TestGatewayCleanPath:
         self, client: AsyncClient, test_id: str, prompt: str
     ) -> None:
         r = await client.post(_GATEWAY, content=_body(prompt), headers=_JSON_CT)
-        assert "x-guardrail-signature" in r.headers, (
-            f"[{test_id}] X-GuardRail-Signature header missing from {r.status_code} response"
+        assert "x-citadel-signature" in r.headers, (
+            f"[{test_id}] X-Citadel-Signature header missing from {r.status_code} response"
         )
 
     @pytest.mark.parametrize(
@@ -251,7 +251,7 @@ class TestGatewayCleanPath:
     ) -> None:
         """HMAC-SHA256 produces a 256-bit digest = 32 bytes = 64 hex characters."""
         r = await client.post(_GATEWAY, content=_body(prompt), headers=_JSON_CT)
-        sig = r.headers.get("x-guardrail-signature", "")
+        sig = r.headers.get("x-citadel-signature", "")
         assert len(sig) == 64, (
             f"[{test_id}] Expected 64 hex chars, got {len(sig)!r}"
         )
@@ -309,7 +309,7 @@ class TestCryptoIntegrity:
         r = await client.post(_GATEWAY, content=raw_body, headers=_JSON_CT)
         assert r.status_code == 200
 
-        sig = r.headers["x-guardrail-signature"]
+        sig = r.headers["x-citadel-signature"]
         canonical = canonicalize_payload(raw_body)
 
         assert verify_hmac_signature(canonical, sig), (
@@ -330,8 +330,8 @@ class TestCryptoIntegrity:
         r2 = await client.post(_GATEWAY, content=body_reversed, headers=_JSON_CT)
 
         assert r1.status_code == r2.status_code == 200
-        sig1 = r1.headers["x-guardrail-signature"]
-        sig2 = r2.headers["x-guardrail-signature"]
+        sig1 = r1.headers["x-citadel-signature"]
+        sig2 = r2.headers["x-citadel-signature"]
         assert sig1 == sig2, (
             f"Key-order-invariance failed:\n  natural  → {sig1}\n  reversed → {sig2}"
         )
@@ -346,7 +346,7 @@ class TestCryptoIntegrity:
         for _ in range(3):
             r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
             assert r.status_code == 200
-            sigs.add(r.headers["x-guardrail-signature"])
+            sigs.add(r.headers["x-citadel-signature"])
 
         assert len(sigs) == 1, f"Non-deterministic signatures: {sigs}"
 
@@ -364,7 +364,7 @@ class TestCryptoIntegrity:
         r_b = await client.post(_GATEWAY, content=body_b, headers=_JSON_CT)
 
         assert r_a.status_code == r_b.status_code == 200
-        assert r_a.headers["x-guardrail-signature"] != r_b.headers["x-guardrail-signature"], (
+        assert r_a.headers["x-citadel-signature"] != r_b.headers["x-citadel-signature"], (
             "A single-character change must produce a completely different HMAC"
         )
 
@@ -377,7 +377,7 @@ class TestCryptoIntegrity:
         """
         body = json.dumps({"prompt": "Original message"}).encode()
         r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
-        sig = r.headers["x-guardrail-signature"]
+        sig = r.headers["x-citadel-signature"]
 
         tampered_canonical = canonicalize_payload(
             json.dumps({"prompt": "Modified message"}).encode()
@@ -395,7 +395,7 @@ class TestCryptoIntegrity:
         """
         body = json.dumps({"prompt": "Corruption resistance test"}).encode()
         r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
-        sig = r.headers["x-guardrail-signature"]
+        sig = r.headers["x-citadel-signature"]
 
         last_char = sig[-1]
         flipped = sig[:-1] + ("0" if last_char != "0" else "1")
@@ -416,7 +416,7 @@ class TestCryptoIntegrity:
     ) -> None:
         """
         The signature_preview field in the JSON body must reflect the first 8
-        and last 4 characters of the X-GuardRail-Signature header value.
+        and last 4 characters of the X-Citadel-Signature header value.
 
         This ensures the body and header are derived from the same signing
         operation and are not independently generated.
@@ -424,7 +424,7 @@ class TestCryptoIntegrity:
         body = json.dumps({"prompt": "Preview alignment check"}).encode()
         r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
 
-        sig = r.headers["x-guardrail-signature"]
+        sig = r.headers["x-citadel-signature"]
         preview = r.json()["signature_preview"]
         expected_preview = f"{sig[:8]}...{sig[-4:]}"
 
@@ -441,7 +441,7 @@ class TestCryptoIntegrity:
         Canonicalisation must sort keys before signing.  Two payloads with the
         same data but different key order must produce the same HMAC — verified
         here by independently computing the canonical form and comparing against
-        the gateway's X-GuardRail-Signature header.
+        the gateway's X-Citadel-Signature header.
         """
         sent = {"prompt": "canonical test", "z": "last", "a": "first", "m": "middle"}
         body = json.dumps(sent).encode()
@@ -449,7 +449,7 @@ class TestCryptoIntegrity:
         r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
         assert r.status_code == 200
 
-        sig = r.headers["x-guardrail-signature"]
+        sig = r.headers["x-citadel-signature"]
         canonical = canonicalize_payload(body)
         assert verify_hmac_signature(canonical, sig), (
             "Gateway signature must verify against the independently-computed canonical form"
@@ -478,7 +478,7 @@ class TestEdgeCases:
         )
         assert r.status_code == 400
         assert r.json()["error"] == "Invalid request body"
-        assert "x-guardrail-signature" not in r.headers
+        assert "x-citadel-signature" not in r.headers
 
     async def test_empty_body_is_rejected_with_400(
         self, client: AsyncClient
@@ -486,7 +486,7 @@ class TestEdgeCases:
         """An empty request body is not valid JSON; must return 400, not 500."""
         r = await client.post(_GATEWAY, content=b"", headers=_JSON_CT)
         assert r.status_code == 400
-        assert "x-guardrail-signature" not in r.headers
+        assert "x-citadel-signature" not in r.headers
 
     async def test_empty_json_object_returns_400_missing_prompt(
         self, client: AsyncClient
@@ -511,7 +511,7 @@ class TestEdgeCases:
             headers=_JSON_CT,
         )
         assert r.status_code == 200
-        assert len(r.headers.get("x-guardrail-signature", "")) == 64
+        assert len(r.headers.get("x-citadel-signature", "")) == 64
 
     async def test_nested_json_body_is_signed_correctly(
         self, client: AsyncClient
@@ -524,7 +524,7 @@ class TestEdgeCases:
         }).encode()
         r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
         assert r.status_code == 200
-        sig = r.headers.get("x-guardrail-signature", "")
+        sig = r.headers.get("x-citadel-signature", "")
         assert len(sig) == 64
         assert verify_hmac_signature(canonicalize_payload(body), sig)
 
@@ -562,7 +562,7 @@ class TestEdgeCases:
         body = json.dumps({"prompt": "日本語テスト 🇯🇵 مرحبا"}).encode("utf-8")
         r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
         assert r.status_code == 200
-        sig = r.headers.get("x-guardrail-signature", "")
+        sig = r.headers.get("x-citadel-signature", "")
         assert verify_hmac_signature(canonicalize_payload(body), sig), (
             "Unicode payload signature must verify correctly"
         )

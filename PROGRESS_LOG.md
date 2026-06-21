@@ -1,4 +1,4 @@
-# GuardRail-AI: Execution Log & State Tracker
+# Citadel: Execution Log & State Tracker
 
 ## Instructions for AI Agents
 Before starting a new coding session or task, read this document to understand the current state of the project. Upon completing a task, update the relevant sections below. Ensure entries are concise and technical.
@@ -17,7 +17,7 @@ Before starting a new coding session or task, read this document to understand t
 ### 2026-05-27 — Environment & Project Scaffold
 * Python virtual environment (`.venv`) created; `requirements.txt` written with all Phase 1–2 deps (`fastapi`, `uvicorn[standard]`, `pydantic-settings`, `lark`, `pyyaml`, `cryptography`, `httpx`, `pytest`, `pytest-asyncio`, `pytest-cov`, `black`, `ruff`, `mypy`).
 * Full production directory tree created: `app/`, `app/api/v1/`, `app/middleware/`, `app/security/`, `app/crypto/`, `app/parser/`, `app/handlers/`, `app/utils/`, `grammar/`, `config/`, `tests/`, `docker/`.
-* `.env.example` written (template for `GUARDRAIL_SECRET_KEY`, `LLM_API_BASE_URL`, `HOST`, `PORT`).
+* `.env.example` written (template for `CITADEL_SECRET_KEY`, `LLM_API_BASE_URL`, `HOST`, `PORT`).
 * `.gitignore` written (excludes `.venv`, `.env`, `__pycache__`, `.mypy_cache`, coverage artefacts).
 
 ### 2026-05-27 — FastAPI Application Skeleton (`app/main.py`)
@@ -42,12 +42,12 @@ Before starting a new coding session or task, read this document to understand t
 * **`canonicalize_payload(body)`:** Parses JSON, re-serialises with `sort_keys=True, separators=(",",":")` — canonical form is key-order-independent (same data = same HMAC regardless of insertion order).
 * **`generate_hmac_signature(payload)`:** `hmac.new(key, payload.encode("utf-8"), hashlib.sha256).hexdigest()` → 64-char lowercase hex.
 * **`verify_hmac_signature(payload, signature)`:** `hmac.compare_digest` (constant-time; prevents timing-based side-channel attacks). Returns `False` on any exception — never raises.
-* **Gateway integration:** `POST /api/v1/gateway` canonicalises body → signs → returns HTTP 202 with `X-GuardRail-Signature` header (full 64-char hex). Body returns only an 8+4-char preview. Non-JSON → 400. Missing key → 503 (no internal detail leaked).
+* **Gateway integration:** `POST /api/v1/gateway` canonicalises body → signs → returns HTTP 202 with `X-Citadel-Signature` header (full 64-char hex). Body returns only an 8+4-char preview. Non-JSON → 400. Missing key → 503 (no internal detail leaked).
 
 ### 2026-05-27 — Integration Test Suite (`tests/test_phase1.py`)
 * **216 tests, all passing** in 1.37 s on Python 3.10.11.
 * `pytest.ini`: `asyncio_mode = auto`, `testpaths = tests`, `-v --tb=short`.
-* `tests/conftest.py`: sets `GUARDRAIL_SECRET_KEY` at module level (before any app import) so `crypto._load_key()` finds a valid key. Provides `client` (`AsyncClient` + `ASGITransport`) and `secret_key` (session-scoped) fixtures.
+* `tests/conftest.py`: sets `CITADEL_SECRET_KEY` at module level (before any app import) so `crypto._load_key()` finds a valid key. Provides `client` (`AsyncClient` + `ASGITransport`) and `secret_key` (session-scoped) fixtures.
 * **`TestFirewallBlocking` (163 parametrised tests):** 55 attack prompts × 3 assertions each (status 400, correct body, no signature header) + 2 structural tests (deeply nested injection, injection after clean prefix). Covers all 5 signature categories + 7 case-insensitivity variants.
 * **`TestGatewayCleanPath` (32 parametrised tests):** 8 clean prompts × 4 assertions (202 status, header present, 64-char hex, response body shape).
 * **`TestCryptoIntegrity` (9 tests):** independent signature verification, key-order invariance, determinism, avalanche effect, tamper detection, bit-flip corruption, all-zeros forgery, preview alignment, canonical byte count.
@@ -67,7 +67,7 @@ Before starting a new coding session or task, read this document to understand t
 * **`app/api/v1/proxy.py`** — Full Phase 2 gateway route replacing the Phase 1 placeholder.
   * Complete five-step pipeline per request: canonicalise → HMAC-sign → extract prompt → `mock_llm_call()` → `validate_llm_output()`.
   * `mock_llm_call()`: deterministic routing — `edge_case` in prompt → trailing-comma JSON (exercises the parser rejection path → 502); `fetch` / `compute` in prompt → respective valid tool-call JSON; default → search tool-call.
-  * Fail-closed status matrix: `400` (non-JSON body, missing/blank `prompt`), `502` (CFG grammar violation), `503` (HMAC key absent), `200` (validated tool-call delivered with `X-GuardRail-Signature` header).
+  * Fail-closed status matrix: `400` (non-JSON body, missing/blank `prompt`), `502` (CFG grammar violation), `503` (HMAC key absent), `200` (validated tool-call delivered with `X-Citadel-Signature` header).
 
 * **`app/parser/exceptions.py`** — `OutputParsingError` dataclass with `reason`, `line`, `column` fields; clean separation between internal parse detail and the public error surface.
 
@@ -83,15 +83,15 @@ Before starting a new coding session or task, read this document to understand t
 
 * **`Dockerfile`** — Multi-stage production build (`builder` → `runtime`), `python:3.11-slim`.
   * **Builder stage:** venv created at `/opt/venv`; only 8 production runtime packages installed (dev tools `pytest*`, `black`, `ruff`, `mypy` explicitly excluded, halving the venv footprint).
-  * **Runtime stage:** OS security patches applied (`apt-get upgrade`); dedicated non-root system user `guardrail_user` (UID/GID 10001, `--no-create-home`, shell `/usr/sbin/nologin`); only `app/`, `grammar/`, `config/` directories copied (tests, scripts, `.venv` excluded); `PYTHONDONTWRITEBYTECODE=1` + `PYTHONFAULTHANDLER=1` + `PYTHONUNBUFFERED=1` set.
-  * `GUARDRAIL_SECRET_KEY` placeholder is intentionally < 32 decoded bytes so `validate_key_at_startup()` aborts the process if the operator forgets to inject a real key.
+  * **Runtime stage:** OS security patches applied (`apt-get upgrade`); dedicated non-root system user `citadel_user` (UID/GID 10001, `--no-create-home`, shell `/usr/sbin/nologin`); only `app/`, `grammar/`, `config/` directories copied (tests, scripts, `.venv` excluded); `PYTHONDONTWRITEBYTECODE=1` + `PYTHONFAULTHANDLER=1` + `PYTHONUNBUFFERED=1` set.
+  * `CITADEL_SECRET_KEY` placeholder is intentionally < 32 decoded bytes so `validate_key_at_startup()` aborts the process if the operator forgets to inject a real key.
   * `HEALTHCHECK` uses Python stdlib only (`urllib.request`) — no `curl` dependency on the slim base.
   * `CMD` exec form (JSON array) — uvicorn receives `SIGTERM` directly (no shell wrapper) for clean in-flight request draining.
 
 * **`docker-compose.yml`** — Local integration test / staging compose config.
   * Builds `runtime` target; `HOST_PORT` variable allows parallel local instances without file edits.
   * Full security hardening profile: `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]`, `read_only: true`, `tmpfs: [/tmp]`.
-  * Environment variables sourced from shell / `.env` file with safe defaults; `GUARDRAIL_SECRET_KEY` default is the same intentionally-invalid placeholder as the Dockerfile.
+  * Environment variables sourced from shell / `.env` file with safe defaults; `CITADEL_SECRET_KEY` default is the same intentionally-invalid placeholder as the Dockerfile.
   * Log rotation: `json-file` driver with `max-size: 10m`, `max-file: 3`.
 
 ---
@@ -109,5 +109,5 @@ Before starting a new coding session or task, read this document to understand t
 * **Benchmark:** `scripts/benchmark.py` — 500-request adversarial pool; P95/P99 latency + RPS + per-category accuracy measured. SLA verdict: P99 < 200 ms and Max < 200 ms.
 * **Run tests:** `python -m pytest tests/ -v --cov=app`
 * **Run benchmark (server must be live):** `python scripts/benchmark.py`
-* **Build container:** `docker build -t guardrail-ai:latest .`
+* **Build container:** `docker build -t citadel:latest .`
 * **Run container:** `docker compose up --build`

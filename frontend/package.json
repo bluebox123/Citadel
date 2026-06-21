@@ -1,7 +1,7 @@
 {
-  "name": "guardrail-ai-frontend",
+  "name": "citadel-frontend",
   "version": "1.0.0",
-  "description": "GuardRail-AI Frontend - Gilded Noir UI for cryptographic security gateway",
+  "description": "Citadel Frontend - Gilded Noir UI for cryptographic security gateway",
   "private": true,
   "scripts": {
     "dev": "next dev",

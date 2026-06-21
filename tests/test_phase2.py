@@ -370,8 +370,8 @@ class TestGatewayPhase2Integration:
         assert isinstance(tool_call.get("arguments"), dict)
 
         # Signature header must be present and well-formed.
-        assert "x-guardrail-signature" in r.headers
-        sig = r.headers["x-guardrail-signature"]
+        assert "x-citadel-signature" in r.headers
+        sig = r.headers["x-citadel-signature"]
         assert re.fullmatch(r"[0-9a-f]{64}", sig), (
             f"Signature must be 64 lowercase hex chars; got {sig!r}"
         )
@@ -393,7 +393,7 @@ class TestGatewayPhase2Integration:
 
         'Payload safely destroyed' is verified by three assertions:
           1. Status is 502 — the invalid output never reaches the client as data.
-          2. X-GuardRail-Signature header is ABSENT — the signature is not
+          2. X-Citadel-Signature header is ABSENT — the signature is not
              issued for an output that failed validation, preventing any
              downstream system from treating the malformed output as trusted.
           3. The raw malformed LLM string does not appear anywhere in the
@@ -418,8 +418,8 @@ class TestGatewayPhase2Integration:
         )
 
         # ── Assertion 2: signature header absent ─────────────────────────────
-        assert "x-guardrail-signature" not in r.headers, (
-            "X-GuardRail-Signature must NOT be issued for a parser-rejected LLM output"
+        assert "x-citadel-signature" not in r.headers, (
+            "X-Citadel-Signature must NOT be issued for a parser-rejected LLM output"
         )
 
         # ── Assertion 3: raw malformed output not echoed ─────────────────────
@@ -482,7 +482,7 @@ class TestGatewayPhase2Integration:
         r = await client.post(_GATEWAY, json={"context": {}, "metadata": {}})
         assert r.status_code == 400
         assert r.json()["error"] == "Invalid request body"
-        assert "x-guardrail-signature" not in r.headers
+        assert "x-citadel-signature" not in r.headers
 
     async def test_gateway_empty_prompt_returns_400(
         self, client: AsyncClient
@@ -490,7 +490,7 @@ class TestGatewayPhase2Integration:
         """An empty-string prompt must return 400 (not reach the mock LLM)."""
         r = await client.post(_GATEWAY, json={"prompt": "   "})
         assert r.status_code == 400
-        assert "x-guardrail-signature" not in r.headers
+        assert "x-citadel-signature" not in r.headers
 
     async def test_gateway_non_json_body_still_400(
         self, client: AsyncClient
@@ -500,7 +500,7 @@ class TestGatewayPhase2Integration:
             _GATEWAY, content=b"plain text", headers={"content-type": "text/plain"}
         )
         assert r.status_code == 400
-        assert "x-guardrail-signature" not in r.headers
+        assert "x-citadel-signature" not in r.headers
 
     async def test_firewall_still_blocks_injections_in_phase2(
         self, client: AsyncClient
@@ -522,7 +522,7 @@ class TestGatewayPhase2Integration:
             assert r.json().get("error") == "Security violation detected", (
                 f"Wrong rejection body for {prompt!r}: {r.json()}"
             )
-            assert "x-guardrail-signature" not in r.headers
+            assert "x-citadel-signature" not in r.headers
 
 
 # ===========================================================================
@@ -541,7 +541,7 @@ class TestPhase2SecurityInvariants:
         self, client: AsyncClient
     ) -> None:
         """
-        The X-GuardRail-Signature must be the HMAC of the CANONICAL REQUEST
+        The X-Citadel-Signature must be the HMAC of the CANONICAL REQUEST
         BODY — not the LLM output or any other derived value.
 
         This is verified by independently computing HMAC(canonical(request))
@@ -554,10 +554,10 @@ class TestPhase2SecurityInvariants:
         r = await client.post(_GATEWAY, content=request_body, headers=_JSON_CT)
         assert r.status_code == 200
 
-        sig = r.headers["x-guardrail-signature"]
+        sig = r.headers["x-citadel-signature"]
         canonical = canonicalize_payload(request_body)
         assert verify_hmac_signature(canonical, sig), (
-            "Signature in X-GuardRail-Signature must verify against "
+            "Signature in X-Citadel-Signature must verify against "
             "HMAC(canonical(request_body))"
         )
 
@@ -576,8 +576,8 @@ class TestPhase2SecurityInvariants:
         r2 = await client.post(_GATEWAY, content=body_reversed, headers=_JSON_CT)
 
         assert r1.status_code == r2.status_code == 200
-        sig1 = r1.headers["x-guardrail-signature"]
-        sig2 = r2.headers["x-guardrail-signature"]
+        sig1 = r1.headers["x-citadel-signature"]
+        sig2 = r2.headers["x-citadel-signature"]
         assert sig1 == sig2, (
             f"Key-order invariance failed:\n  natural  -> {sig1}\n  reversed -> {sig2}"
         )
@@ -645,7 +645,7 @@ class TestPhase2SecurityInvariants:
         for _ in range(3):
             r = await client.post(_GATEWAY, content=body, headers=_JSON_CT)
             assert r.status_code == 200
-            signatures.add(r.headers["x-guardrail-signature"])
+            signatures.add(r.headers["x-citadel-signature"])
 
         assert len(signatures) == 1, (
             f"Expected one unique signature across 3 identical requests; "

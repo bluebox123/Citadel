@@ -6,7 +6,7 @@ per the project's minimal-attack-surface policy.
 
 Key loading
 -----------
-GUARDRAIL_SECRET_KEY is read from the environment exactly once at module
+CITADEL_SECRET_KEY is read from the environment exactly once at module
 import time and decoded from hex into raw bytes.  If the variable is absent
 or the decoded key is shorter than 32 bytes (256 bits), _SECRET_KEY is set
 to None and every cryptographic call fails closed (RuntimeError).
@@ -50,7 +50,7 @@ _MIN_KEY_BYTES: int = 32
 
 def _load_key() -> bytes | None:
     """
-    Read and validate GUARDRAIL_SECRET_KEY from the environment.
+    Read and validate CITADEL_SECRET_KEY from the environment.
 
     Expected format: 64 lowercase hex characters (32 raw bytes), produced by:
         python -c "import secrets; print(secrets.token_hex(32))"
@@ -62,11 +62,11 @@ def _load_key() -> bytes | None:
         Raw key bytes if valid, None otherwise (caller must treat None as
         an irrecoverable configuration error).
     """
-    raw: str = os.environ.get("GUARDRAIL_SECRET_KEY", "").strip()
+    raw: str = os.environ.get("CITADEL_SECRET_KEY", "").strip()
 
     if not raw:
         logger.critical(
-            "GUARDRAIL_SECRET_KEY is not set. "
+            "CITADEL_SECRET_KEY is not set. "
             "All cryptographic operations will fail closed until the key is provided."
         )
         return None
@@ -78,14 +78,14 @@ def _load_key() -> bytes | None:
         # Not valid hex — accept raw UTF-8 bytes with a warning.
         key_bytes = raw.encode("utf-8")
         logger.warning(
-            "GUARDRAIL_SECRET_KEY is not hex-encoded; using raw UTF-8 bytes (%d bytes). "
+            "CITADEL_SECRET_KEY is not hex-encoded; using raw UTF-8 bytes (%d bytes). "
             "Generate a proper key: python -c \"import secrets; print(secrets.token_hex(32))\"",
             len(key_bytes),
         )
 
     if len(key_bytes) < _MIN_KEY_BYTES:
         logger.critical(
-            "GUARDRAIL_SECRET_KEY is too short: %d bytes provided, %d required. "
+            "CITADEL_SECRET_KEY is too short: %d bytes provided, %d required. "
             "All cryptographic operations will fail closed.",
             len(key_bytes),
             _MIN_KEY_BYTES,
@@ -115,7 +115,7 @@ def _require_key() -> bytes:
     """
     if _SECRET_KEY is None:
         raise RuntimeError(
-            "GUARDRAIL_SECRET_KEY is absent or invalid. "
+            "CITADEL_SECRET_KEY is absent or invalid. "
             "Cryptographic operations cannot proceed — failing closed."
         )
     return _SECRET_KEY
@@ -193,7 +193,7 @@ def generate_hmac_signature(payload: str) -> str:
         64-character lowercase hex string (256-bit HMAC-SHA256 digest).
 
     Raises:
-        RuntimeError: if GUARDRAIL_SECRET_KEY is not configured (fail-closed).
+        RuntimeError: if CITADEL_SECRET_KEY is not configured (fail-closed).
     """
     key = _require_key()
     mac = hmac.new(key, payload.encode("utf-8"), hashlib.sha256)

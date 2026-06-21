@@ -1,9 +1,9 @@
 """
-Shared pytest configuration and fixtures for GuardRail-AI.
+Shared pytest configuration and fixtures for Citadel.
 
 CRITICAL ORDER-OF-OPERATIONS:
   app/utils/crypto.py calls _load_key() at module-import time (eagerly, once).
-  GUARDRAIL_SECRET_KEY must therefore exist in os.environ BEFORE any app
+  CITADEL_SECRET_KEY must therefore exist in os.environ BEFORE any app
   module is imported — including indirect imports triggered by pytest's
   collection phase.
 
@@ -20,10 +20,10 @@ import secrets
 # --- Set key before any app import -------------------------------------------
 # token_hex(32) → 64 lowercase hex chars → 32 raw bytes (256-bit key).
 # os.environ.setdefault leaves an already-present variable untouched, so a
-# developer can export GUARDRAIL_SECRET_KEY in their shell and that value will
+# developer can export CITADEL_SECRET_KEY in their shell and that value will
 # be used instead of this generated one.
 _TEST_HEX_KEY: str = secrets.token_hex(32)
-os.environ.setdefault("GUARDRAIL_SECRET_KEY", _TEST_HEX_KEY)
+os.environ.setdefault("CITADEL_SECRET_KEY", _TEST_HEX_KEY)
 
 # --- Now it is safe to import app modules ------------------------------------
 import pytest
@@ -58,4 +58,4 @@ def secret_key() -> str:
     the HTTP layer) can import crypto functions and call them directly — the
     same key will be loaded because it was set in the environment above.
     """
-    return os.environ["GUARDRAIL_SECRET_KEY"]
+    return os.environ["CITADEL_SECRET_KEY"]

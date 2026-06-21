@@ -2,7 +2,7 @@
 
 > A cryptographically-secured firewall and grammar-strict proxy that sits in front of your LLM APIs.
 
-GuardRail-AI is a high-throughput security middleware layer that intercepts every prompt headed to a downstream LLM, screens it for prompt-injection and jailbreak attempts, cryptographically signs the payload, and **structurally validates the model's output** against a formal grammar before it ever reaches your application. Malformed or unsafe traffic is rejected fail-closed — the proxy never guesses, repairs, or forwards data it cannot verify.
+Citadel is a high-throughput security middleware layer that intercepts every prompt headed to a downstream LLM, screens it for prompt-injection and jailbreak attempts, cryptographically signs the payload, and **structurally validates the model's output** against a formal grammar before it ever reaches your application. Malformed or unsafe traffic is rejected fail-closed — the proxy never guesses, repairs, or forwards data it cannot verify.
 
 ---
 
@@ -13,14 +13,14 @@ LLM integrations have two soft underbellies:
 1. **Inbound** — untrusted user prompts can carry injection / jailbreak payloads that hijack the model.
 2. **Outbound** — model output is free-form text. When you parse it as a tool call or JSON, a single malformed token can crash a downstream handler or trigger an unintended action.
 
-GuardRail-AI hardens both edges with a single proxy hop, designed to add **< 200 ms** of round-trip overhead and to lean on the standard library rather than heavy external dependencies.
+Citadel hardens both edges with a single proxy hop, designed to add **< 200 ms** of round-trip overhead and to lean on the standard library rather than heavy external dependencies.
 
 ---
 
 ## Architecture
 
 ```
-                       ┌─────────────────────── GuardRail-AI Proxy ───────────────────────┐
+                       ┌────────────────────────── Citadel Proxy ──────────────────────────┐
                        │                                                                   │
   Client / User  ──►   │  FirewallMiddleware ──►  HMAC Signer ──►  LLM Call ──►  CFG Parser │ ──►  Validated
    (raw prompt)        │  (injection scan)        (SHA-256)       (downstream)  (structural)│      tool call
@@ -36,7 +36,7 @@ GuardRail-AI hardens both edges with a single proxy hop, designed to add **< 200
 2. **Canonicalize & sign** — the JSON body is canonicalized (sorted keys, compact form) and signed with **HMAC-SHA256**. Canonical form makes the signature independent of client key ordering.
 3. **LLM call** — the signed prompt is forwarded to the target LLM (currently a deterministic mock; pluggable real HTTP client).
 4. **Grammar validation** — raw model output is parsed against a formal **Context-Free Grammar** (Lark LALR(1)) and then deserialized. Any structural violation raises an error and returns `502` — no repair, no guessing.
-5. **Response** — the validated tool-call dict is returned with an `X-GuardRail-Signature` header so downstream verifiers can confirm provenance.
+5. **Response** — the validated tool-call dict is returned with an `X-Citadel-Signature` header so downstream verifiers can confirm provenance.
 
 ### Fail-closed status codes
 
@@ -83,7 +83,7 @@ pip install -r requirements.txt
 
 # 3. Configure environment
 cp .env.example .env
-#    Set GUARDRAIL_SECRET_KEY to a value >= 32 bytes — the app fails fast without it.
+#    Set CITADEL_SECRET_KEY to a value >= 32 bytes — the app fails fast without it.
 
 # 4. (Optional) train the content classifier
 python scripts/train_classifier.py
@@ -131,7 +131,7 @@ curl -X POST http://localhost:8000/api/v1/gateway \
 }
 ```
 
-The signed payload digest is also returned on the `X-GuardRail-Signature` response header.
+The signed payload digest is also returned on the `X-Citadel-Signature` response header.
 
 ---
 
@@ -174,7 +174,7 @@ Set via environment variables (see `.env.example`):
 
 | Variable | Purpose |
 |----------|---------|
-| `GUARDRAIL_SECRET_KEY` | HMAC signing key — must be ≥ 32 bytes (required) |
+| `CITADEL_SECRET_KEY` | HMAC signing key — must be ≥ 32 bytes (required) |
 | `LOG_LEVEL` | Logging verbosity (default `INFO`) |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins |
 | `HOST` / `PORT` | Bind address (default `0.0.0.0:8000`) |

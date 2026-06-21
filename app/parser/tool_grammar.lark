@@ -6,7 +6,7 @@
 // terminal ambiguities using parser state, making it functionally equivalent to
 // LL(1) for this grammar. Every choice point is resolved with a single look-ahead
 // token and zero rightward dependencies — satisfying the L-attribution requirement
-// mandated by GuardRail-AI's single-pass streaming validation architecture.
+// mandated by Citadel's single-pass streaming validation architecture.
 //
 // REJECTION GUARANTEES (grammar and lexer level, before the Transformer runs)
 // ────────────────────────────────────────────────────────────────────────────

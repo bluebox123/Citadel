@@ -543,7 +543,7 @@ export default function Playground() {
         apiResult = {
           httpStatus: res.status,
           body: res.data,
-          signature: res.headers["x-guardrail-signature"] as string | undefined,
+          signature: res.headers["x-citadel-signature"] as string | undefined,
         };
       })
       .catch(err => {
@@ -635,7 +635,7 @@ export default function Playground() {
                   className="text-[11px] font-bold tracking-[0.2em] uppercase text-white/88"
                   style={{ fontFamily: "var(--font-heading)" }}
                 >
-                  GUARDRAIL-AI
+                  CITADEL
                 </div>
                 <div
                   className="text-[8px] tracking-[0.15em] uppercase text-white/28"
@@ -1050,7 +1050,7 @@ export default function Playground() {
               className="text-[8px] tracking-[0.15em] uppercase text-white/18"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              GUARDRAIL-AI · PHASE 4
+              CITADEL · PHASE 4
             </div>
             <div
               className="text-[8px] tracking-[0.14em] uppercase text-white/14"

@@ -130,7 +130,7 @@ _REJECT_PAYLOAD: bytes = json.dumps(
 _REJECT_HEADERS: list[list[bytes]] = [
     [b"content-type", b"application/json; charset=utf-8"],
     [b"content-length", str(len(_REJECT_PAYLOAD)).encode()],
-    [b"x-guardrail-decision", b"reject"],
+    [b"x-citadel-decision", b"reject"],
 ]
 
 _ML_REJECT_PAYLOAD: bytes = json.dumps(
@@ -144,7 +144,7 @@ _ML_REJECT_PAYLOAD: bytes = json.dumps(
 _ML_REJECT_HEADERS: list[list[bytes]] = [
     [b"content-type", b"application/json; charset=utf-8"],
     [b"content-length", str(len(_ML_REJECT_PAYLOAD)).encode()],
-    [b"x-guardrail-decision", b"reject-ml"],
+    [b"x-citadel-decision", b"reject-ml"],
 ]
 
 # ---------------------------------------------------------------------------

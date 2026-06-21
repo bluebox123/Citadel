@@ -1,4 +1,4 @@
-# GuardRail-AI: Complete Project Documentation
+# Citadel: Complete Project Documentation
 
 **Last Updated:** June 7, 2026  
 **Status:** Production-Ready • All 3 Phases Complete • Containerized
@@ -24,9 +24,9 @@
 
 ## Project Overview
 
-### What is GuardRail-AI?
+### What is Citadel?
 
-GuardRail-AI is a **high-throughput security middleware and proxy layer** designed to protect downstream LLM APIs and backend systems from adversarial attacks. It intercepts, validates, sanitizes, cryptographically signs, and structurally validates all inbound prompts and outbound tool calls.
+Citadel is a **high-throughput security middleware and proxy layer** designed to protect downstream LLM APIs and backend systems from adversarial attacks. It intercepts, validates, sanitizes, cryptographically signs, and structurally validates all inbound prompts and outbound tool calls.
 
 ### Core Mission
 
@@ -68,7 +68,7 @@ POST /api/v1/gateway
     └─ CFG parser validation on LLM output
     ↓
 HTTP 200 (success) OR HTTP 400/502/503 (failure)
-    ├─ X-GuardRail-Signature header (on success)
+    ├─ X-Citadel-Signature header (on success)
     └─ Structured error reason (on failure)
 ```
 
@@ -137,7 +137,7 @@ HTTP 400
 
 ```python
 # Loading
-_SECRET_KEY = _load_key()  # from GUARDRAIL_SECRET_KEY env var
+_SECRET_KEY = _load_key()  # from CITADEL_SECRET_KEY env var
 # Raises RuntimeError if absent or < 32 bytes
 
 # Canonicalization (before signing)
@@ -240,7 +240,7 @@ Every security check is **strictly rejecting**:
 | Firewall signature match | Return error immediately | 400 |
 | CFG grammar violation | Return error immediately | 502 |
 | HMAC verification failure | Return error immediately | 403 (inferred) |
-| Missing GUARDRAIL_SECRET_KEY | Abort process at startup | N/A (fail-fast) |
+| Missing CITADEL_SECRET_KEY | Abort process at startup | N/A (fail-fast) |
 | Malformed JSON | Return error immediately | 400 |
 
 **No Silent Bypass:** Guesses, autocorrection, or partial acceptance never occur.
@@ -317,7 +317,7 @@ Checks: JSON compliance, numeric precision, Unicode validity
       "query": "quantum computing research"
     }
   },
-  "X-GuardRail-Signature": "a3c5e2f0b1d4c9a7e8f2b5c3d1a8e9f7a5c2b8d4e1f3a7c5b9d2e4f8a1c3e"
+  "X-Citadel-Signature": "a3c5e2f0b1d4c9a7e8f2b5c3d1a8e9f7a5c2b8d4e1f3a7c5b9d2e4f8a1c3e"
 }
 ```
 
@@ -455,7 +455,7 @@ python scripts/benchmark.py
 ### Docker Image
 
 **Base:** `python:3.11-slim`  
-**Non-Root User:** `guardrail_user` (UID/GID 10001)  
+**Non-Root User:** `citadel_user` (UID/GID 10001)  
 **Image Size:** ~400 MB (runtime stage only, dev tools excluded)
 
 #### Multi-Stage Build
@@ -474,7 +474,7 @@ python scripts/benchmark.py
   - `PYTHONDONTWRITEBYTECODE=1` — No `.pyc` files
   - `PYTHONFAULTHANDLER=1` — Core dump on crashes
   - `PYTHONUNBUFFERED=1` — Unbuffered stdout/stderr
-  - `GUARDRAIL_SECRET_KEY=<placeholder>` — Intentionally invalid (< 32 bytes)
+  - `CITADEL_SECRET_KEY=<placeholder>` — Intentionally invalid (< 32 bytes)
 
 **Healthcheck:**
 ```dockerfile
@@ -493,7 +493,7 @@ Uses exec form (JSON array) — uvicorn receives `SIGTERM` directly for graceful
 **File:** `docker-compose.yml`
 
 **Services:**
-- **guardrail** (main application service)
+- **citadel** (main application service)
   - Builds runtime target
   - Exposes port (configurable via `HOST_PORT` variable)
   - Mounts health check
@@ -506,7 +506,7 @@ Uses exec form (JSON array) — uvicorn receives `SIGTERM` directly for graceful
 
 **Environment Variables:**
 - Sourced from shell / `.env` file
-- Defaults provided (placeholder `GUARDRAIL_SECRET_KEY`)
+- Defaults provided (placeholder `CITADEL_SECRET_KEY`)
 
 **Logging:**
 - Driver: `json-file`
@@ -514,7 +514,7 @@ Uses exec form (JSON array) — uvicorn receives `SIGTERM` directly for graceful
 
 ### Deployment Checklist
 
-- [ ] Set real `GUARDRAIL_SECRET_KEY` (≥ 32 bytes)
+- [ ] Set real `CITADEL_SECRET_KEY` (≥ 32 bytes)
 - [ ] Configure `LLM_API_BASE_URL` (actual LLM endpoint)
 - [ ] Set `LOG_LEVEL` (INFO / DEBUG / WARNING)
 - [ ] Verify firewall rules are up-to-date
@@ -537,7 +537,7 @@ Uses exec form (JSON array) — uvicorn receives `SIGTERM` directly for graceful
 
 ```bash
 # Clone and navigate to project
-cd /path/to/GuardRail-AI
+cd /path/to/Citadel
 
 # Create virtual environment
 python -m venv .venv
@@ -551,7 +551,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Set environment variables
-export GUARDRAIL_SECRET_KEY="your-32-byte-hex-key-here"
+export CITADEL_SECRET_KEY="your-32-byte-hex-key-here"
 export LOG_LEVEL="DEBUG"
 
 # Run tests
@@ -586,13 +586,13 @@ npm start
 docker-compose up --build
 
 # Or build manually
-docker build -t guardrail-ai:latest .
+docker build -t citadel:latest .
 
 # Run container
-docker run -e GUARDRAIL_SECRET_KEY="..." \
+docker run -e CITADEL_SECRET_KEY="..." \
            -e LOG_LEVEL="INFO" \
            -p 8000:8000 \
-           guardrail-ai:latest
+           citadel:latest
 ```
 
 ### Code Quality
@@ -678,7 +678,7 @@ black app/ tests/ && ruff check app/ tests/ && mypy app/
 ## Directory Structure
 
 ```
-GuardRail-AI/
+Citadel/
 ├── app/                          # Backend application
 │   ├── __init__.py
 │   ├── config.py                 # Configuration management
@@ -781,7 +781,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # 2. Set secret key
-export GUARDRAIL_SECRET_KEY="your-32-byte-hex-key"
+export CITADEL_SECRET_KEY="your-32-byte-hex-key"
 
 # 3. Run tests
 pytest -v

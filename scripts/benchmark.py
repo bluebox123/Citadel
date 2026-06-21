@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GuardRail-AI Phase 3 Adversarial Benchmark
+Citadel Phase 3 Adversarial Benchmark
 ===========================================
 Fires 500 concurrent requests at the local FastAPI gateway and proves that
 middleware overhead stays under 200 ms even under adversarial load.
@@ -15,7 +15,7 @@ Payload distribution
 Usage
 -----
   # Start the server first:
-  #   $env:GUARDRAIL_SECRET_KEY = "$(python -c 'import secrets; print(secrets.token_hex(32))')"
+  #   $env:CITADEL_SECRET_KEY = "$(python -c 'import secrets; print(secrets.token_hex(32))')"
   #   uvicorn app.main:app --port 8000
   #
   # Then run:
@@ -305,7 +305,7 @@ def print_report(
 
     lines: list[str] = [
         top,
-        _header("GuardRail-AI  Phase 3 Benchmark Report"),
+        _header("Citadel  Phase 3 Benchmark Report"),
         _divider(),
         _section("Run Configuration"),
         _divider("─"),
@@ -369,7 +369,7 @@ async def check_server_health() -> None:
             f"\n[ERROR] Cannot reach {HEALTH_URL}\n"
             f"  → {exc}\n\n"
             "  Make sure the server is running:\n"
-            "    $env:GUARDRAIL_SECRET_KEY = \"$(python -c 'import secrets; print(secrets.token_hex(32))')\"\n"
+            "    $env:CITADEL_SECRET_KEY = \"$(python -c 'import secrets; print(secrets.token_hex(32))')\"\n"
             "    uvicorn app.main:app --port 8000\n",
             file=sys.stderr,
         )
@@ -379,7 +379,7 @@ async def check_server_health() -> None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 async def main() -> None:
-    print(f"\nGuardRail-AI Phase 3 Benchmark  —  {TOTAL_REQUESTS} requests, "
+    print(f"\nCitadel Phase 3 Benchmark  —  {TOTAL_REQUESTS} requests, "
           f"concurrency={CONCURRENCY}")
     print(f"Target: {GATEWAY_URL}\n")
 

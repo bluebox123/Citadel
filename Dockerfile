@@ -1,5 +1,5 @@
 # =============================================================================
-# GuardRail-AI — Production Dockerfile
+# Citadel — Production Dockerfile
 # =============================================================================
 # Two-stage build:
 #   builder  — installs Python packages into an isolated venv
@@ -8,12 +8,12 @@
 # The final image contains no build tools, no dev dependencies, and no pip.
 #
 # Build:
-#   docker build -t guardrail-ai:latest .
+#   docker build -t citadel:latest .
 #
 # Run (supply the real secret key; never bake it into the image):
 #   docker run --rm -p 8000:8000 \
-#     -e GUARDRAIL_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
-#     guardrail-ai:latest
+#     -e CITADEL_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
+#     citadel:latest
 #
 # Recommended: add a .dockerignore that excludes .venv/, tests/, .env, and
 #   __pycache__ so the build context stays small.
@@ -68,13 +68,13 @@ RUN apt-get update \
 ARG APP_UID=10001
 ARG APP_GID=10001
 
-RUN groupadd --system --gid "${APP_GID}" guardrail_user \
+RUN groupadd --system --gid "${APP_GID}" citadel_user \
     && useradd  --system \
                 --uid  "${APP_UID}" \
                 --gid  "${APP_GID}" \
                 --no-create-home \
                 --shell /usr/sbin/nologin \
-                guardrail_user
+                citadel_user
 
 # ── Virtual environment ───────────────────────────────────────────────────────
 COPY --from=builder /opt/venv /opt/venv
@@ -85,9 +85,9 @@ WORKDIR /app
 
 # Only copy the directories the app actually reads at runtime.
 # Tests, scripts, docker/, .venv/, and editor configs are excluded.
-COPY --chown=guardrail_user:guardrail_user app/     ./app/
-COPY --chown=guardrail_user:guardrail_user grammar/ ./grammar/
-COPY --chown=guardrail_user:guardrail_user config/  ./config/
+COPY --chown=citadel_user:citadel_user app/     ./app/
+COPY --chown=citadel_user:citadel_user grammar/ ./grammar/
+COPY --chown=citadel_user:citadel_user config/  ./config/
 
 # ── Python hardening ──────────────────────────────────────────────────────────
 # PYTHONUNBUFFERED   — stdout/stderr reach the container log driver immediately.
@@ -113,12 +113,12 @@ ENV HOST=0.0.0.0 \
 #
 # Generate a valid key:
 #   python -c "import secrets; print(secrets.token_hex(32))"
-ENV GUARDRAIL_SECRET_KEY=REPLACE_ME_generate_with_python_secrets_token_hex_32
+ENV CITADEL_SECRET_KEY=REPLACE_ME_generate_with_python_secrets_token_hex_32
 
 EXPOSE 8000
 
 # Drop to non-root before the first process instruction executes.
-USER guardrail_user
+USER citadel_user
 
 # ── Health check ──────────────────────────────────────────────────────────────
 # Uses only the Python standard library (no curl dependency on the slim image).

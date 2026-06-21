@@ -1,7 +1,7 @@
-# GuardRail-AI: System Architecture & Master Plan
+# Citadel: System Architecture & Master Plan
 
 ## Project Identity
-GuardRail-AI is a high-throughput security proxy and middleware layer designed to protect downstream LLM APIs and backend systems. It intercepts, sanitizes, cryptographically signs, and structurally validates all inbound prompts and outbound tool calls.
+Citadel is a high-throughput security proxy and middleware layer designed to protect downstream LLM APIs and backend systems. It intercepts, sanitizes, cryptographically signs, and structurally validates all inbound prompts and outbound tool calls.
 
 ## Core Architectural Flow
 

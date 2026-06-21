@@ -1,8 +1,8 @@
 # =============================================================================
-# GuardRail-AI — Docker Compose  (local development / integration testing)
+# Citadel — Docker Compose  (local development / integration testing)
 # =============================================================================
 # Quick start:
-#   1. Copy .env.example → .env and fill in a real GUARDRAIL_SECRET_KEY:
+#   1. Copy .env.example → .env and fill in a real CITADEL_SECRET_KEY:
 #        python -c "import secrets; print(secrets.token_hex(32))"
 #   2. docker compose up --build
 #
@@ -16,7 +16,7 @@
 
 services:
 
-  guardrail-ai:
+  citadel:
 
     # ── Build ─────────────────────────────────────────────────────────────────
     build:
@@ -27,8 +27,8 @@ services:
         APP_UID: "10001"       # must match the UID declared in the Dockerfile
         APP_GID: "10001"
 
-    image: guardrail-ai:latest
-    container_name: guardrail-ai
+    image: citadel:latest
+    container_name: citadel
     restart: unless-stopped
 
     # ── Port mapping ──────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ services:
 
       # REQUIRED — the app refuses to start if this is the placeholder value.
       # Generate: python -c "import secrets; print(secrets.token_hex(32))"
-      GUARDRAIL_SECRET_KEY: "${GUARDRAIL_SECRET_KEY:-REPLACE_ME_generate_with_python_secrets_token_hex_32}"
+      CITADEL_SECRET_KEY: "${CITADEL_SECRET_KEY:-REPLACE_ME_generate_with_python_secrets_token_hex_32}"
 
       # Optional LLM backend — the mock LLM is used automatically when absent.
       LLM_API_BASE_URL: "${LLM_API_BASE_URL:-https://api.openai.com/v1}"

@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "GuardRail-AI | Cryptographic Security Gateway",
+  title: "Citadel | Cryptographic Security Gateway",
   description:
     "Advanced LLM firewall with prompt injection detection, HMAC-SHA256 payload signing, and grammar-strict output validation.",
   keywords: [
@@ -43,15 +43,15 @@ export const metadata: Metadata = {
     "CFG parsing",
     "gateway",
   ],
-  authors: [{ name: "GuardRail-AI Team" }],
+  authors: [{ name: "Citadel Team" }],
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://guardrail-ai.example.com",
-    title: "GuardRail-AI | Cryptographic Security Gateway",
+    url: "https://citadel.example.com",
+    title: "Citadel | Cryptographic Security Gateway",
     description:
       "Advanced LLM firewall with prompt injection detection and zero-trust architecture.",
-    siteName: "GuardRail-AI",
+    siteName: "Citadel",
   },
 };
 

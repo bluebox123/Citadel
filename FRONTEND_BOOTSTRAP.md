@@ -1,4 +1,4 @@
-# Phase 4: GuardRail-AI Frontend Bootstrap — Complete
+# Phase 4: Citadel Frontend Bootstrap — Complete
 
 ## Overview
 
@@ -303,7 +303,7 @@ Brutalist scale: `xs` (0.75rem) → `9xl` (8rem), with balanced line-height for 
 ### API Integration
 
 - **CORS**: Configure backend to allow frontend origin
-- **HMAC verification**: Backend validates `X-GuardRail-Signature` header
+- **HMAC verification**: Backend validates `X-Citadel-Signature` header
 - **Rate limiting**: Implement on backend (not client-side)
 
 ---
@@ -321,8 +321,8 @@ Automatic deployments on git push to `main` branch.
 ### Docker
 
 ```bash
-docker build -t guardrail-ai-frontend:latest .
-docker run -p 3000:3000 guardrail-ai-frontend:latest
+docker build -t citadel-frontend:latest .
+docker run -p 3000:3000 citadel-frontend:latest
 ```
 
 (Dockerfile to be created in Phase 4 continuation)

@@ -1,4 +1,4 @@
-"""Custom exceptions for the GuardRail-AI parser subsystem."""
+"""Custom exceptions for the Citadel parser subsystem."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from __future__ import annotations
 class OutputParsingError(Exception):
     """Raised when LLM output fails CFG grammar validation or deserialisation.
 
-    GuardRail-AI's fail-closed contract guarantees this exception is raised
+    Citadel's fail-closed contract guarantees this exception is raised
     (never silently swallowed) whenever the parser rejects an output.  Callers
     must catch it and route to the fallback handler — partial or unvalidated
     data is never returned.

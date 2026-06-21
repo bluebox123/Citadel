@@ -1,5 +1,5 @@
 """
-Train the GuardRail-AI harmful-content ML classifier.
+Train the Citadel harmful-content ML classifier.
 
 Architecture: TF-IDF (1–3 grams, 8 000 features) + Logistic Regression.
 Chosen for sub-millisecond inference, no GPU requirement, and a model
@@ -389,7 +389,7 @@ def save(pipeline: Pipeline, path: Path) -> None:
 
 
 def main() -> None:
-    print("GuardRail-AI — Training harmful-content classifier")
+    print("Citadel — Training harmful-content classifier")
     print(f"  Harmful examples : {len(_HARMFUL)}")
     print(f"  Safe examples    : {len(_SAFE)}")
     print(f"  Total            : {len(_HARMFUL) + len(_SAFE)}")

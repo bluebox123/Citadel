@@ -11,7 +11,7 @@ Request lifecycle (every POST /api/v1/gateway):
          │      ├─ OutputParsingError → 502 Bad Gateway
          │      └─ success → validated tool-call dict
          └─ 5. 200 OK  {status, tool_call, signature_preview}
-                header: X-GuardRail-Signature: <64-char hex>
+                header: X-Citadel-Signature: <64-char hex>
 
 Fail-closed status codes:
   400  Non-JSON body, or missing/invalid ``prompt`` field.
@@ -54,7 +54,7 @@ async def mock_llm_call(prompt: str) -> str:
 
     In Phase 3 this is replaced by a real async HTTP call to the LLM API
     endpoint configured in LLM_API_BASE_URL, forwarding the signed payload
-    and the X-GuardRail-Signature header.
+    and the X-Citadel-Signature header.
 
     Args:
         prompt: Sanitised user prompt (firewall already passed it).
@@ -216,7 +216,7 @@ async def gateway(request: Request) -> JSONResponse:
         )
 
     # ── Step 5: Return validated tool call ────────────────────────────────────
-    # X-GuardRail-Signature travels on the response so downstream verifiers
+    # X-Citadel-Signature travels on the response so downstream verifiers
     # can confirm the *request* payload was signed by this gateway instance.
     logger.info(
         "Gateway delivered validated tool call | tool=%r sig_prefix=%.8s",
@@ -225,7 +225,7 @@ async def gateway(request: Request) -> JSONResponse:
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        headers={"X-GuardRail-Signature": signature},
+        headers={"X-Citadel-Signature": signature},
         content={
             "status": "ok",
             "tool_call": tool_call,

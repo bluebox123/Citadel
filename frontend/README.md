@@ -1,6 +1,6 @@
-# GuardRail-AI Frontend
+# Citadel Frontend
 
-Advanced Next.js frontend for the GuardRail-AI cryptographic security gateway.
+Advanced Next.js frontend for the Citadel cryptographic security gateway.
 
 ## Visual Aesthetic: Gilded Noir
 
